@@ -12,7 +12,7 @@ class RingsFilter:
     
     def __init__(self, path):
         
-        self.init_img = cv2.imread(os.path.join(os.path.dirname(__file__), path), cv2.IMREAD_GRAYSCALE)        
+        self.init_img = cv2.imread(os.path.join(os.path.dirname(__file__), '..', 'data', path), cv2.IMREAD_GRAYSCALE)        
         
         if self.init_img is None:
             print("Error: Could not open image file.")

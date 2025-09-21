@@ -10,7 +10,9 @@ from omegaconf import OmegaConf
 class VideoProcessor:
     def __init__(self, path, cfg):
         self.cfg = cfg
-        self.vid = cv2.VideoCapture(os.path.join(os.path.dirname(__file__), "cat.mp4"))
+        self.vid = cv2.VideoCapture(
+            os.path.join(os.path.dirname(__file__), "..", "data", path)
+        )
         if not self.vid.isOpened():
             print("Error: Could not open video file.")
             raise ValueError("Could not open video file")
@@ -22,17 +24,41 @@ class VideoProcessor:
         self.max_points = 4
         self.frame = None
 
-        self.brightness = 0
-        self.contrast = 0
-        self.saturation = 0
-        self.hue = 0
+        self.brightness = self.cfg["delta_range"][0]
+        self.contrast = self.cfg["gamma_range"][0]
+        self.saturation = self.cfg["beta_range"][0]
+        self.hue = self.cfg["alpha_range"][0]
 
         self.original_window = cv2.namedWindow("Original")
         self.transformed_window = cv2.namedWindow("Transformed")
-        cv2.createTrackbar("Brightness", "Original", 0, 100, self.on_brightness_change)
-        cv2.createTrackbar("Contrast", "Original", 0, 100, self.on_contrast_change)
-        cv2.createTrackbar("Saturation", "Original", 0, 100, self.on_saturation_change)
-        cv2.createTrackbar("Hue", "Original", 0, 180, self.on_hue_change)
+        cv2.createTrackbar(
+            "Brightness",
+            "Original",
+            int(self.cfg["delta_range"][0] * 100),
+            int(self.cfg["delta_range"][1] * 100),
+            self.on_brightness_change,
+        )
+        cv2.createTrackbar(
+            "Contrast",
+            "Original",
+            int(self.cfg["gamma_range"][0] * 100),
+            int(self.cfg["gamma_range"][1] * 100),
+            self.on_contrast_change,
+        )
+        cv2.createTrackbar(
+            "Saturation",
+            "Original",
+            int(self.cfg["beta_range"][0] * 100),
+            int(self.cfg["beta_range"][1] * 100),
+            self.on_saturation_change,
+        )
+        cv2.createTrackbar(
+            "Hue",
+            "Original",
+            int(self.cfg["alpha_range"][0]),
+            int(self.cfg["alpha_range"][1]),
+            self.on_hue_change,
+        )
 
         cv2.setMouseCallback("Original", self.mouse_callback)
 
@@ -81,40 +107,38 @@ class VideoProcessor:
     def on_hue_change(self, value):
         self.hue = value
 
-    def apply_colorjitter(self, frame):
-        # hue
+    def apply_hue(self, frame):
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV).astype(np.float32)
-        frame_hsv[:, :, 1] = (frame_hsv[:, :, 1] + self.hue) % 180
-        frame = cv2.cvtColor(frame_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        frame_hsv[:, :, 1] = np.remainder(
+            frame_hsv[:, :, 1] + self.hue, self.cfg["alpha_range"][1]
+        )
+        return cv2.cvtColor(frame_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
-        # saturation
+    def apply_saturation(self, frame):
         frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame[:, :, 0] = np.clip(
-            frame[:, :, 0] * self.saturation + frame_grayscale * (1 - self.saturation),
-            0,
-            255,
+        frame[:, :, 0] = frame[:, :, 0] * self.saturation + frame_grayscale * (
+            1 - self.saturation
         )
-        frame[:, :, 1] = np.clip(
-            frame[:, :, 1] * self.saturation + frame_grayscale * (1 - self.saturation),
-            0,
-            255,
+        frame[:, :, 1] = frame[:, :, 1] * self.saturation + frame_grayscale * (
+            1 - self.saturation
         )
-        frame[:, :, 2] = np.clip(
-            frame[:, :, 2] * self.saturation + frame_grayscale * (1 - self.saturation),
-            0,
-            255,
+        frame[:, :, 2] = frame[:, :, 2] * self.saturation + frame_grayscale * (
+            1 - self.saturation
         )
+        return frame
 
-        # contrast
-        mean = cv2.mean(frame)[0:3]
-        mean = np.mean(mean)
-        frame = cv2.convertScaleAbs(
-            frame, alpha=self.contrast, beta=(1 - self.contrast) * mean
-        )
+    def apply_contrast(self, frame):
+        mean = np.mean(frame)
+        return frame * self.contrast + (1 - self.contrast) * mean
 
-        # brightness
-        frame = cv2.convertScaleAbs(frame, alpha=self.brightness)
+    def apply_brightness(self, frame):
+        return cv2.convertScaleAbs(frame, alpha=self.brightness)
 
+    def apply_colorjitter(self, frame):
+        frame = self.apply_hue(frame)
+        frame = self.apply_saturation(frame)
+        frame = self.apply_contrast(frame)
+        frame = self.apply_brightness(frame)
         return frame
 
     def transform_frame(self, frame):

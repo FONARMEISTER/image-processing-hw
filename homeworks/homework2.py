@@ -9,34 +9,17 @@ from omegaconf import OmegaConf
 
 
 class RingsFilter:
-    def __init__(self, path):
-        self.init_img = cv2.imread(
-            os.path.join(os.path.dirname(__file__), "..", "data", path),
-            cv2.IMREAD_GRAYSCALE,
-        )
-
-        if self.init_img is None:
-            print("Error: Could not open image file.")
-            raise ValueError("Could not open image file")
-        else:
-            print("Image file opened successfully")
-
-        self.init_specter = self.create_specter(self.init_img)
-        self.h, self.w = self.init_specter.shape
-
+    def __init__(self, cfg):
+        self.image_name = cfg['image_name']
         self.img_window = cv2.namedWindow("Rings")
-        self.specter_window = cv2.namedWindow("Specter")
-        cv2.createTrackbar("h", "Specter", 0, self.h // 2, self.on_h_change)
-        cv2.createTrackbar("w", "Specter", 0, self.w // 2, self.on_w_change)
+        self.spectrum_window = cv2.namedWindow("Spectrum")
+        self.w = 0
+        self.h = 0
         self.removed_h = 0
         self.removed_w = 0
+        
 
-        self.update_state()
-
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-    def create_specter(self, img):
+    def create_spectrum(self, img):
         return np.fft.fftshift(np.fft.fft2(img))
 
     def on_h_change(self, value):
@@ -47,38 +30,59 @@ class RingsFilter:
         self.removed_w = value
         self.update_state()
 
-    def update_specter(self):
-        self.specter = copy.copy(self.init_specter)
+    def update_spectrum(self):
+        self.spectrum = copy.copy(self.init_spectrum)
         if self.removed_h > 0 and self.removed_w > 0:
-            self.specter[
+            self.spectrum[
                 0 : self.removed_h,
                 self.w // 2 - self.removed_w : self.w // 2 + self.removed_w,
             ] = 0
-            self.specter[
+            self.spectrum[
                 self.h - self.removed_h : self.h,
                 self.w // 2 - self.removed_w : self.w // 2 + self.removed_w,
             ] = 0
 
-    def draw_specter(self):
-        normalized_specter = cv2.normalize(
-            np.log(1 + np.abs(self.specter)), None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U
+    def draw_spectrum(self):
+        normalized_spectrum = cv2.normalize(
+            np.log(1 + np.abs(self.spectrum)), None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U
         )
-        cv2.imshow("Specter", normalized_specter)
+        cv2.imshow("Spectrum", normalized_spectrum)
 
     def draw_image(self):
-        img = np.abs(np.fft.ifft2(np.fft.ifftshift(self.specter)))
+        img = np.abs(np.fft.ifft2(np.fft.ifftshift(self.spectrum)))
         img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
         cv2.imshow("Rings", img)
 
     def update_state(self):
-        self.update_specter()
-        self.draw_specter()
+        self.update_spectrum()
+        self.draw_spectrum()
         self.draw_image()
+    
+
+    def process(self):
+        self.init_img = cv2.imread(
+            os.path.join(os.path.dirname(__file__), "..", "data", self.image_name),
+            cv2.IMREAD_GRAYSCALE,
+        )
+        if self.init_img is None:
+            print("Error: Could not open image file.")
+            raise ValueError("Could not open image file")
+        else:
+            print("Image file opened successfully")
+
+        self.init_spectrum = self.create_spectrum(self.init_img)
+        self.h, self.w = self.init_spectrum.shape
+        cv2.createTrackbar("h", "Spectrum", 0, self.h // 2, self.on_h_change)
+        cv2.createTrackbar("w", "Spectrum", 0, self.w // 2, self.on_w_change)
+        self.update_state()
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 def main(cfg):
-    img_path = "saturn_rings.png"
-    RingsFilter(img_path)
+    rings_filter = RingsFilter(cfg)
+    rings_filter.process()
 
 
 if __name__ == "__main__":

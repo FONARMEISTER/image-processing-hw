@@ -109,8 +109,8 @@ class VideoProcessor:
 
     def apply_hue(self, frame):
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV).astype(np.float32)
-        frame_hsv[:, :, 1] = np.remainder(
-            frame_hsv[:, :, 1] + self.hue, self.cfg["alpha_range"][1]
+        frame_hsv[:, :, 0] = np.remainder(
+            frame_hsv[:, :, 0] + self.hue, self.cfg["alpha_range"][1]
         )
         return cv2.cvtColor(frame_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 

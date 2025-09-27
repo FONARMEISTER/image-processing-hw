@@ -3,3 +3,5 @@ homework1:
   beta_range: [0.2, 1]        # диапазон изменения параметра beta
   gamma_range: [0.2, 1]   # диапазон изменения параметра gamma
   delta_range: [0.2, 1]       # диапазон изменения параметра delta
+homework2:
+  image_name: saturn_rings.png # поиск из папки data

@@ -10,14 +10,18 @@ from omegaconf import OmegaConf
 
 class RingsFilter:
     def __init__(self, cfg):
-        self.image_name = cfg['image_name']
+        self.image_name = cfg["image_name"]
         self.img_window = cv2.namedWindow("Rings")
         self.spectrum_window = cv2.namedWindow("Spectrum")
         self.w = 0
         self.h = 0
         self.removed_h = 0
         self.removed_w = 0
-        
+        self.spectrum = None
+        self.abs_spectrum = None
+        self.init_img = None
+        self.init_abs_spectrum = None
+        self.init_arg_spectrum = None
 
     def create_spectrum(self, img):
         return np.fft.fftshift(np.fft.fft2(img))
@@ -31,16 +35,17 @@ class RingsFilter:
         self.update_state()
 
     def update_spectrum(self):
-        self.spectrum = copy.copy(self.init_spectrum)
+        self.abs_spectrum = copy.copy(self.init_abs_spectrum)
         if self.removed_h > 0 and self.removed_w > 0:
-            self.spectrum[
+            self.abs_spectrum[
                 0 : self.removed_h,
                 self.w // 2 - self.removed_w : self.w // 2 + self.removed_w,
             ] = 0
-            self.spectrum[
+            self.abs_spectrum[
                 self.h - self.removed_h : self.h,
                 self.w // 2 - self.removed_w : self.w // 2 + self.removed_w,
             ] = 0
+        self.spectrum = self.abs_spectrum * np.exp(1j * self.init_arg_spectrum)
 
     def draw_spectrum(self):
         normalized_spectrum = cv2.normalize(
@@ -57,7 +62,6 @@ class RingsFilter:
         self.update_spectrum()
         self.draw_spectrum()
         self.draw_image()
-    
 
     def process(self):
         self.init_img = cv2.imread(
@@ -70,8 +74,10 @@ class RingsFilter:
         else:
             print("Image file opened successfully")
 
-        self.init_spectrum = self.create_spectrum(self.init_img)
-        self.h, self.w = self.init_spectrum.shape
+        init_spectrum = self.create_spectrum(self.init_img)
+        self.init_abs_spectrum = np.abs(init_spectrum)
+        self.init_arg_spectrum = np.angle(init_spectrum)
+        self.h, self.w = self.init_abs_spectrum.shape
         cv2.createTrackbar("h", "Spectrum", 0, self.h // 2, self.on_h_change)
         cv2.createTrackbar("w", "Spectrum", 0, self.w // 2, self.on_w_change)
         self.update_state()
@@ -79,7 +85,7 @@ class RingsFilter:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-
+  
 def main(cfg):
     rings_filter = RingsFilter(cfg)
     rings_filter.process()

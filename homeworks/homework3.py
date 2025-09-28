@@ -26,7 +26,7 @@ def bilateral_filter(
         for j in range(w):
             padded_i = i + r
             padded_j = j + r
-            neighbors = padded_image[padded_i - r: padded_i + r + 1, padded_j - r: padded_j + r + 1]
+            neighbors = np.uint64(padded_image[padded_i - r: padded_i + r + 1, padded_j - r: padded_j + r + 1])
 
             mutual_W = np.exp(-((neighbors - src_image[i][j])**2 / (2 * sigma_color**2)))
 
@@ -50,7 +50,7 @@ def main(cfg):
     sigma_color = cfg['sigma_color']
 
     before_opencv = datetime.datetime.now()
-    opencv_dst_image = cv2.bilateralFilter(src=src_image,sigmaSpace=sigma_space, sigmaColor=sigma_color, d = int(2 * sigma_space + 1))
+    opencv_dst_image = cv2.bilateralFilter(src=src_image,sigmaSpace=sigma_space, sigmaColor=sigma_color, d = -1)
     cv2.imwrite(cfg['opencv_output_image_path'], opencv_dst_image)
     after_opencv = datetime.datetime.now()
     print(f"opencv bilateral filtration duration {after_opencv - before_opencv}")

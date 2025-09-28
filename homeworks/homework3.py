@@ -11,7 +11,7 @@ from omegaconf import OmegaConf
 def bilateral_filter(src_image, sigma_space, sigma_color):
     dst_image = np.zeros_like(src_image)
     h, w = src_image.shape
-    d = int(2 * sigma_space + 1)
+    d = 2* int(3 * sigma_space) + 1
     r = d // 2
     x, y = np.mgrid[-r : r + 1, -r : r + 1]
     constant_W = np.exp(-(x**2 + y**2) / (2 * sigma_space**2))

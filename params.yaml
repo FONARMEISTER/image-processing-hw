@@ -12,5 +12,5 @@ homework4:
   threshold: 5
   max_trials: 5000
   seed: 0xC0FFEE
-  outpug_image: data/line_ransac.jpg
+  output_image: data/line_ransac.jpg
   output_edges: data/marr_hildreth_edges.jpg

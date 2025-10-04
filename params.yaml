@@ -3,5 +3,11 @@ homework1:
   beta_range: [0.2, 1]        # диапазон изменения параметра beta
   gamma_range: [0.2, 1]   # диапазон изменения параметра gamma
   delta_range: [0.2, 1]       # диапазон изменения параметра delta
+homework3:
+  input_image_path: data/puppy.png
+  output_image_path: data/output.png
+  opencv_output_image_path: data/cv_output.png
+  sigma_space: 15
+  sigma_color: 15
 homework2:
   image_name: saturn_rings.png # поиск из папки data

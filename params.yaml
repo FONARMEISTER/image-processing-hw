@@ -5,3 +5,12 @@ homework1:
   delta_range: [0.2, 1]       # диапазон изменения параметра delta
 homework2:
   image_name: saturn_rings.png # поиск из папки data
+homework4:
+  input_image: data/building.png
+  sigma: 3.5
+  thresh_percent: 0.2
+  threshold: 5
+  max_trials: 5000
+  seed: 0xC0FFEE
+  outpug_image: data/line_ransac.jpg
+  output_edges: data/marr_hildreth_edges.jpg

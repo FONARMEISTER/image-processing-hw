@@ -85,7 +85,7 @@ class RingsFilter:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-  
+
 def main(cfg):
     rings_filter = RingsFilter(cfg)
     rings_filter.process()

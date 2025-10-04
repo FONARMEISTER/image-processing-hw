@@ -22,14 +22,15 @@ def bilateral_filter(src_image, sigma_space, sigma_color):
         for j in range(w):
             padded_i = i + r
             padded_j = j + r
-            neighbors = np.uint64(
+            neighbors = np.float32(
                 padded_image[
                     padded_i - r : padded_i + r + 1, padded_j - r : padded_j + r + 1
                 ]
             )
 
+            center_cell = np.float32(src_image[i][j])
             mutual_W = np.exp(
-                -((neighbors - src_image[i][j]) ** 2 / (2 * sigma_color**2))
+                -((neighbors - center_cell) ** 2 / (2 * sigma_color**2))
             )
 
             W = constant_W * mutual_W

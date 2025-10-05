@@ -1,11 +1,52 @@
 import os
 import os.path
+import random
 from pathlib import Path
 
 import cv2
 import numpy as np
 from omegaconf import OmegaConf
-from sklearn.linear_model import RANSACRegressor
+
+
+class Ransac:
+    def __init__(self, thresh, max_trials, seed):
+        self.thresh = thresh
+        self.max_trials = max_trials
+        self.rnd = random.Random()
+        self.rnd.seed(seed)
+
+        self.k = None
+        self.b = None
+        self.inliners_mask = None
+        self.inliners_count = 0
+
+    def ransac_iter(self, X, y):
+        n = len(X)
+        p1 = self.rnd.randint(0, n - 1)
+        p2 = self.rnd.randint(0, n - 1)
+        while X[p2] == X[p1]:
+            p2 = self.rnd.randint(0, n - 1)
+        if X[p1] > X[p2]:
+            p1, p2 = p2, p1
+        k = (y[p2] - y[p1]) / (X[p2] - X[p1])
+        b = y[p1] - k * X[p1]
+
+        inliners_mask = np.zeros_like(y)
+        inliners_count = 0
+        for i in range(n):
+            if abs(k * X[i] + b - y[i]) <= self.thresh:
+                inliners_mask[i] = 1
+                inliners_count += 1
+        return (k, b, inliners_mask, inliners_count)
+
+    def fit(self, X, y):
+        for i in range(self.max_trials):
+            k, b, inliners_mask, inliners_count = self.ransac_iter(X, y)
+            if inliners_count > self.inliners_count:
+                self.k = k
+                self.b = b
+                self.inliners_mask = inliners_mask
+                self.inliners_count = inliners_count
 
 
 def apply_gaussian_filter(img, sigma):
@@ -48,25 +89,30 @@ def calc_marr_hildreth_edges(img, thresh_percent):
 
 
 def find_line_with_ransac(edges, thresh, max_trials, seed):
-    ransac = RANSACRegressor(
+    ransac = Ransac(
         max_trials=max_trials,
-        residual_threshold=thresh,
-        random_state=seed,
+        thresh=thresh,
+        seed=seed,
     )
     cols, rows = np.where(edges != 0)
     edges_points = np.column_stack((rows, cols))
-    X = edges_points[:, 0].reshape(-1, 1)
+    X = edges_points[:, 0]
     y = edges_points[:, 1]
     ransac.fit(X, y)
 
     edges_inliners_mask = np.zeros_like(edges)
-    for i in range(X.shape[0]):
-        if ransac.inlier_mask_[i]:
-            edges_inliners_mask[y[i], X[i, 0]] = 1
+    x_min = X[0]
+    x_max = X[0]
+    for i, is_inlier in enumerate(ransac.inliners_mask):
+        if not is_inlier:
+            continue
+        edges_inliners_mask[y[i], X[i]] = 1
+        if X[i] > x_max:
+            x_max = X[i]
+        if X[i] < x_min:
+            x_min = X[i]
 
-    k, b = ransac.estimator_.coef_[0], ransac.estimator_.intercept_
-    x_min = np.min(X[ransac.inlier_mask_])
-    x_max = np.max(X[ransac.inlier_mask_])
+    k, b = ransac.k, ransac.b
     y_min = int(k * x_min + b)
     y_max = int(k * x_max + b)
     return (x_min, y_min, x_max, y_max, edges_inliners_mask)

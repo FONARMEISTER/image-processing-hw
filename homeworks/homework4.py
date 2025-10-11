@@ -15,36 +15,36 @@ class Ransac:
         self.rnd = random.Random()
         self.rnd.seed(seed)
 
-        self.k = None
-        self.b = None
+        self.A = None
+        self.B = None
+        self.C = None
         self.inliners_mask = None
         self.inliners_count = 0
 
     def ransac_iter(self, X, y):
         n = len(X)
-        p1 = self.rnd.randint(0, n - 1)
-        p2 = self.rnd.randint(0, n - 1)
-        while X[p2] == X[p1]:
-            p2 = self.rnd.randint(0, n - 1)
-        if X[p1] > X[p2]:
-            p1, p2 = p2, p1
-        k = (y[p2] - y[p1]) / (X[p2] - X[p1])
-        b = y[p1] - k * X[p1]
+        p1, p2 = np.random.choice(n, 2, replace=False)
+        A = y[p1] - y[p2]
+        B = X[p2] - X[p1]
+        C = X[p1] * y[p2] - X[p2]* y[p1]
 
-        inliners_mask = np.zeros_like(y)
+        inliners_mask = np.zeros_like(y, dtype=bool)
         inliners_count = 0
         for i in range(n):
-            if abs(k * X[i] + b - y[i]) <= self.thresh:
-                inliners_mask[i] = 1
+            dist = abs(A * X[i] + B * y[i] + C) / (A * A + B * B)**0.5
+            if dist <= self.thresh:
+                inliners_mask[i] = True
                 inliners_count += 1
-        return (k, b, inliners_mask, inliners_count)
+                
+        return (A, B, C, inliners_mask, inliners_count)
 
     def fit(self, X, y):
         for i in range(self.max_trials):
-            k, b, inliners_mask, inliners_count = self.ransac_iter(X, y)
+            A, B, C, inliners_mask, inliners_count = self.ransac_iter(X, y)
             if inliners_count > self.inliners_count:
-                self.k = k
-                self.b = b
+                self.A = A
+                self.B = B
+                self.C = C
                 self.inliners_mask = inliners_mask
                 self.inliners_count = inliners_count
 
@@ -100,21 +100,34 @@ def find_line_with_ransac(edges, thresh, max_trials, seed):
     y = edges_points[:, 1]
     ransac.fit(X, y)
 
+    ransac_on_inliners = Ransac(
+        max_trials=max_trials,
+        thresh=thresh,
+        seed=seed
+    )
+    X_inliners = X[ransac.inliners_mask]
+    y_inliners = y[ransac.inliners_mask]
+    ransac_on_inliners.fit(X_inliners, y_inliners)
+
     edges_inliners_mask = np.zeros_like(edges)
-    x_min = X[0]
-    x_max = X[0]
-    for i, is_inlier in enumerate(ransac.inliners_mask):
+    x_min_ind = 0
+    x_max_ind = 0
+    for i, is_inlier in enumerate(ransac_on_inliners.inliners_mask):
         if not is_inlier:
             continue
-        edges_inliners_mask[y[i], X[i]] = 1
-        if X[i] > x_max:
-            x_max = X[i]
-        if X[i] < x_min:
-            x_min = X[i]
+        edges_inliners_mask[y_inliners[i], X_inliners[i]] = 1
+        if X_inliners[i] > X_inliners[x_max_ind]:
+            x_max_ind = i
+        if X_inliners[i] < X_inliners[x_min_ind]:
+            x_min_ind = i
 
-    k, b = ransac.k, ransac.b
-    y_min = int(k * x_min + b)
-    y_max = int(k * x_max + b)
+    A, B, C = ransac_on_inliners.A, ransac_on_inliners.B, ransac_on_inliners.C
+    if B == 0: # vertical line
+        return (X_inliners[x_min_ind], y_inliners[x_min_ind], X_inliners[x_max_ind], y_inliners[x_max_ind], edges_inliners_mask)
+    x_min = X_inliners[x_min_ind]
+    x_max = X_inliners[x_max_ind]
+    y_min = -int((A * x_min + C) / B)
+    y_max = -int((A * x_max + C) / B)
     return (x_min, y_min, x_max, y_max, edges_inliners_mask)
 
 

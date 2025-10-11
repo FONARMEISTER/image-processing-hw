@@ -11,8 +11,6 @@ homework3:
   sigma_color: 15
 homework2:
   image_name: saturn_rings.png # поиск из папки data
-<<<<<<< HEAD
-=======
 homework4:
   input_image: data/building.png
   sigma: 3.5
@@ -20,11 +18,5 @@ homework4:
   threshold: 5
   max_trials: 5000
   seed: 0xC0FFEE
-<<<<<<< HEAD
-  outpug_image: data/line_ransac.jpg
-  output_edges: data/marr_hildreth_edges.jpg
->>>>>>> b351346 (init)
-=======
   output_image: data/line_ransac.jpg
   output_edges: data/marr_hildreth_edges.jpg
->>>>>>> 649ea53 (implement hw4)

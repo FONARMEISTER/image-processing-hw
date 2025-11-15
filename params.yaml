@@ -11,6 +11,15 @@ homework3:
   sigma_color: 15
 homework2:
   image_name: saturn_rings.png # поиск из папки data
+homework4:
+  input_image: data/building.png
+  sigma: 3.5
+  thresh_percent: 0.2
+  threshold: 5
+  max_trials: 5000
+  seed: 0xC0FFEE
+  output_image: data/line_ransac.jpg
+  output_edges: data/marr_hildreth_edges.jpg
 homework5:
     superpoint_weights: data/superpoint.pth
     T: 0.7

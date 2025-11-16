@@ -1,7 +1,7 @@
 import numpy as np
 
 def transform_points(points, R, t):
-  points2 = np.dot(points - t, np.linalg.inv(R))
+  points2 = (points - t) @ R
   return points2
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 def transform_points(points, R, t):
-  points2 = np.dot(points, R) + t
+  points2 = np.dot(points - t, np.linalg.inv(R))
   return points2
 
 
@@ -19,13 +19,9 @@ def rotvec_from_rotation_matrix(R):
 
 
 def project_points(points, P):
-  points2 = np.empty((0, 2))
-  for w in points:
-    w_ = np.hstack([w, 1])
-    point2 = np.dot(P, w_)  
-    point2 /= point2[2]
-    points2 = np.vstack([points2, point2[:2]])
-  return points2
+  points2 = np.column_stack((points, np.ones((points.shape[0], 1)))) @ P.T
+  points2[:, :2] /= points2[:, 2:3]
+  return points2[:, :2]
 
 def from_image_coordinates_to_world(x, y, c, P):
   P_inv = np.linalg.pinv(P)
